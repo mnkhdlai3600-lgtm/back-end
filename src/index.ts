@@ -79,27 +79,35 @@ app.use(express.json());
 
 // write task create api // post request
 
-app.post("/new-user", async (req: Request, res: Response) => {
-  type User = {
-    id: number;
-    title: string;
-    description: string;
-    createdAt: string;
-    updatedAt: string;
-    completed: boolean;
-  };
+type User = {
+  id: number;
+  title: string;
+  description: string;
+  completed: boolean;
+};
 
+const users: User[] = [];
+const usersData = app.post("/new-user", (req: Request, res: Response) => {
   const userData = req.body;
 
-  const users = [];
+  const newUser: User = {
+    id: Date.now(),
+    title: userData.title,
+    description: userData.description,
+    completed: userData.completed,
+  };
+  users.push(newUser);
 
-  users.push(userData);
-
-  console.log(users);
-
-  res.status(404).send({ message: "Bdgue" });
+  res.status(201).json({
+    message: "Amjilttai nemegdlee",
+    data: users,
+  });
+  return users;
 });
 
-app.listen(port, () => console.log("http://localhost:8000"));
+// write task update api // put request
+console.log(usersData);
 
-[{ person1 }, { person2 }];
+app.put("/uptadelist", (req: Request, res: Response) => {});
+
+app.listen(port, () => console.log("http://localhost:8000"));
