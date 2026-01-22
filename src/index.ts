@@ -1,7 +1,9 @@
 import cors from "cors";
 import { configDotenv } from "dotenv";
-import express, { Application, Request, response, Response } from "express";
-import { idText, isDebuggerStatement } from "typescript";
+import express, { Application, Request, Response } from "express";
+import { connectToMongoDB } from "./mongoDB";
+import { UserModel } from "./models/user.model";
+import mongoose from "mongoose";
 
 configDotenv();
 
@@ -11,103 +13,61 @@ const port = 8000;
 app.use(cors());
 app.use(express.json());
 
-// const user = {
-//   name: "MnkhDlai",
-//   email: "mnkhdlai3600@gmail.com",
-//   password: "12345678",
-// };
-
-// app.post("/post", async (req: Request, res: Response) => {
-//   res.status(200).send([req.body]);
-// });
-
-// app.put("/put", async (req: Request, res: Response) => {
-//   const updatedUser = {
-//     ...user,
-//     ...req.body,
-//   };
-
-//   res.status(200).json(updatedUser);
-// });
-// app.get("get", async (req: Request, res: Response) => {
-//   res.status(200).send(req.body);
-// });
-
-// app.delete("/delete", async (req: Request, res: Response) => {
-//   res.status(200).send("Deleted");
-// });
-
-// id search
-
-// app.get("/getById", async (req: Request, res: Response) => {
-//   const users = [
-//     {
-//       id: 1,
-//       name: "Dlai",
-//       email: "mnkhdlai3600@gmail.com",
-//       number: "86698778",
-//     },
-//     {
-//       id: 2,
-//       name: "Namuna",
-//       email: "nazu0321@gmail.com",
-//       number: "88444343",
-//     },
-//     {
-//       id: 3,
-//       name: "Enhdlai",
-//       email: "enkhlai1225@gmail.com",
-//       number: "89868779",
-//     },
-//     {
-//       id: 4,
-//       name: "idk",
-//       email: "idk2021@gmail.com",
-//       number: "90909090",
-//     },
-//   ];
-
-//   const idSearch = Number(req.query.id);
-//   const search = users.find((person) => person.id === idSearch);
-//   console.log(idSearch);
-//   if (search) {
-//     return res.status(200).send({ message: "success", data: search });
-//   } else if (!search) {
-//     return res.status(404).send({ message: "Bdgue" });
-//   }
-// });
-
-// write task create api // post request
-
-type User = {
-  id: number;
-  title: string;
-  description: string;
-  completed: boolean;
-};
-
-const users: User[] = [];
-const usersData = app.post("/new-user", (req: Request, res: Response) => {
-  const userData = req.body;
-
-  const newUser: User = {
-    id: Date.now(),
-    title: userData.title,
-    description: userData.description,
-    completed: userData.completed,
-  };
-  users.push(newUser);
-
-  res.status(201).json({
-    message: "Amjilttai nemegdlee",
-    data: users,
-  });
-  return users;
+app.post("/create-user", async (req: Request, res: Response) => {
+  const { name, email } = req.body;
+  const user = await UserModel.create({ name, email });
+  res.status(200).send({ messege: "Success", data: user });
 });
 
-// write task update api // put request
-console.log(usersData);
+app.put("/api/users/:id", async (req, res) => {
+  try {
+    const id = req.params.id.trim();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID формат буруу" });
+    }
+    const { name, email } = req.body;
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    console.error("UPDATE ERROR", err);
+    res.status(500).json({ message: "User update хийхэд алдаа гарлаа" });
+  }
+});
 
-app.put("/uptadelist", (req: Request, res: Response) => {});
+app.get("/api/users/:id", async (req, res) => {
+  try {
+    const id = req.params.id.trim();
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID формат буруу" });
+    }
+    const user = await UserModel.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "Хэрэглэгч олдсонгүй" });
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "User мэдээлэл авахад алдаа гарлаа" });
+  }
+});
 
-app.listen(port, () => console.log("http://localhost:8000"));
+const startServer = async () => {
+  try {
+    await connectToMongoDB();
+    console.log("MongoDB connected");
+
+    app.listen(port, () => {
+      console.log(`server is running on port ${port}`);
+    });
+  } catch (err) {
+    console.error("Server start error ", err);
+    process.exit(1);
+  }
+};
+
+startServer();
